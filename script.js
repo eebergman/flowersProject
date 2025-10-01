@@ -5,7 +5,7 @@ let data = null,
   originalData = null;
 
 // --- Fixed color display order (always used for rendering) ------------------
-const colorDisplayOrder = [
+const __colorDisplayOrder = [
   "Green",
   "White",
   "Sky",
@@ -36,7 +36,7 @@ const colorDisplayOrder = [
 ];
 
 // --- Per-color styles for TRUE boxes only -----------------------------------
-const toggleColorStyles = {
+const __toggleColorStyles = {
   Red: { bg: "#c12a3d", text: "#ffffff" },
   Coral: { bg: "#ec5b65", text: "#000000" },
   Orange: { bg: "#f3a01c", text: "#000000" },
@@ -68,8 +68,8 @@ const toggleColorStyles = {
 
 // --- Utility to style a single toggle box based on its value ----------------
 function __applyToggleVisual(toggleEl, labelEl, colorName, isTrue) {
-  if (isTrue && toggleColorStyles[colorName]) {
-    const s = toggleColorStyles[colorName];
+  if (isTrue && __toggleColorStyles[colorName]) {
+    const s = __toggleColorStyles[colorName];
     toggleEl.style.backgroundColor = s.bg;
     toggleEl.style.borderColor = "rgba(0,0,0,0)";
     if (labelEl) labelEl.style.color = s.text;
@@ -83,21 +83,18 @@ function __applyToggleVisual(toggleEl, labelEl, colorName, isTrue) {
   }
 }
 
-// Labels to emphasize (bold + underline)
-const __emphasisColors = new Set([
-  "White",
-  "Red",
-  "Yellow",
-  "Sky",
-  "Blue",
-  "Hot Pink",
-]);
-
+// --- MAIN: render color toggles for one species, in fixed order -------------
+/**
+ * Renders the color toggles grid for a species.
+ * - species: the species object (with .colors map)
+ * - parentEl: container to append into
+ * - onDirty: optional callback called after a value changes
+ */
 function renderColorToggles(species, parentEl, onDirty) {
   const grid = document.createElement("div");
   grid.className = "toggles";
 
-  colorDisplayOrder.forEach((colorName) => {
+  __colorDisplayOrder.forEach((colorName) => {
     if (!(colorName in species.colors)) return; // skip if species doesn't use this color
 
     const value = !!species.colors[colorName];
@@ -112,10 +109,6 @@ function renderColorToggles(species, parentEl, onDirty) {
 
     const label = document.createElement("label");
     label.textContent = colorName;
-
-    if (__emphasisColors.has(colorName)) {
-      label.classList.add("emph");
-    }
 
     // Initial visual state
     __applyToggleVisual(row, label, colorName, input.checked);
@@ -135,50 +128,81 @@ function renderColorToggles(species, parentEl, onDirty) {
   parentEl.appendChild(grid);
 }
 
-// -------------------- Upload / paste / download / copy / revert ------------
-$("#fileInput").addEventListener("change", async (e) => {
-  const f = e.target.files[0];
-  if (!f) return;
-  try {
-    const j = JSON.parse(await f.text());
-    loadJSON(j, f.name);
-  } catch (e2) {
-    alert("Invalid JSON: " + e2.message);
+// Collect the JSON buttons
+function initControls() {
+  const fileInputElement = document.getElementById("fileInput");
+  const pasteButton = document.getElementById("btnPaste");
+  const downloadButton = document.getElementById("btnDownload");
+  const copyButton = document.getElementById("btnCopy");
+  const resetButton = document.getElementById("btnReset");
+
+  if (fileInputElement) {
+    fileInputElement.addEventListener("change", async (event) => {
+      const selectedFile = event.target.files[0];
+      if (!selectedFile) return;
+
+      try {
+        const fileText = await selectedFile.text();
+        const parsedJson = JSON.parse(fileText);
+        loadJSON(parsedJson, selectedFile.name);
+      } catch (error) {
+        alert("Invalid JSON: " + error.message);
+      }
+    });
   }
-});
 
-$("#btnPaste").addEventListener("click", () => {
-  const t = prompt("Paste JSON");
-  if (!t) return;
-  try {
-    loadJSON(JSON.parse(t), "pasted.json");
-  } catch (e) {
-    alert("Invalid JSON");
+  if (pasteButton) {
+    pasteButton.addEventListener("click", () => {
+      const pastedText = prompt("Paste JSON");
+      if (!pastedText) return;
+
+      try {
+        const parsedJson = JSON.parse(pastedText);
+        loadJSON(parsedJson, "pasted.json");
+      } catch {
+        alert("Invalid JSON");
+      }
+    });
   }
-});
 
-$("#btnDownload").addEventListener("click", () => {
-  if (!data) return;
-  const blob = new Blob([JSON.stringify(data, null, 2)], {
-    type: "application/json",
-  });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "flowers.json";
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1200);
-});
+  if (downloadButton) {
+    downloadButton.addEventListener("click", () => {
+      if (!data) return;
 
-$("#btnCopy").addEventListener("click", () => {
-  if (!data) return;
-  navigator.clipboard.writeText(JSON.stringify(data, null, 2));
-});
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
+      const anchorElement = document.createElement("a");
+      anchorElement.href = URL.createObjectURL(blob);
+      anchorElement.download = "flowers.json";
+      anchorElement.click();
 
-$("#btnReset").addEventListener("click", () => {
-  if (!originalData) return;
-  data = structuredClone(originalData);
-  render();
-});
+      setTimeout(() => URL.revokeObjectURL(anchorElement.href), 1200);
+    });
+  }
+
+  if (copyButton) {
+    copyButton.addEventListener("click", () => {
+      if (!data) return;
+      navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+    });
+  }
+
+  if (resetButton) {
+    resetButton.addEventListener("click", () => {
+      if (!originalData) return;
+      data = structuredClone(originalData);
+      render();
+    });
+  }
+}
+
+// Run after DOM is loaded
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initControls);
+} else {
+  initControls();
+}
 
 function loadJSON(json, name) {
   originalData = structuredClone(json);
@@ -213,7 +237,9 @@ function render() {
     // Colors (fixed order, true-only colorization)
     const colorsMount = document.createElement("div");
     panel.appendChild(colorsMount);
-    renderColorToggles(sp, colorsMount, () => {});
+    renderColorToggles(sp, colorsMount, () => {
+      // optional: mark dirty / update status if needed
+    });
 
     // Transferable colors numbers
     if (sp.transferable_colors) {

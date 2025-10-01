@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Flowers JSON Boolean Toggle Editor</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <div class="sidebar" id="sidebar"></div>
+  <div class="main">
+    <header>
+      <div class="controls">
+        <input id="fileInput" type="file" accept="application/json,.json" />
+        <button id="btnPaste">Paste JSON</button>
+        <button id="btnDownload">Download</button>
+        <button id="btnCopy" title="Copy current JSON to clipboard">Copy JSON</button>
+        <button id="btnReset" title="Revert to last loaded JSON">Revert</button>
+        <span id="status">No file loaded</span>
+      </div>
+
+    </header>
+    <main id="app"></main>
+  </div>
+  <script src="script.js" defer></script>
+</body>
+
+</html>
