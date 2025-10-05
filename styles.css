@@ -33,7 +33,7 @@ header {
 }
 
 .sidebar {
-  width: 260px;
+  width: 8em;
   background: #111827;
   border-right: 1px solid var(--border);
   overflow-y: auto;
@@ -112,7 +112,7 @@ header {
   height: 18px;
   border-radius: 50%;
   background: #374151;
-  transition: .2s;
+  transition: 0.2s;
 }
 
 .toggle input:checked {
@@ -169,4 +169,76 @@ details.transfer > summary {
   border-radius: 8px;
   padding: 6px 8px;
   text-align: center;
+}
+
+/* Collapsible sidebar */
+.sidebar {
+  transition: width 0.25s ease, padding 0.25s ease, border-color 0.25s ease;
+}
+.sidebar.collapsed {
+  width: 0;
+  padding: 0;
+  border-right-color: transparent;
+  overflow: hidden;
+}
+.sidebar.collapsed * {
+  display: none;
+}
+
+/* Collapsible species panels (use <details class="panel">) */
+details.panel {
+  /* reuses your .panel look */
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0; /* summary gets its own padding */
+  margin-bottom: 16px;
+}
+
+/* Summary header row for each species */
+details.panel > summary {
+  list-style: none; /* hide default marker */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  padding: 14px; /* match old .panel padding */
+  font-weight: 600;
+  user-select: none;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Little chevron */
+details.panel > summary::after {
+  content: "▸";
+  transition: transform 0.2s ease;
+  opacity: 0.8;
+  font-weight: 400;
+}
+details.panel[open] > summary::after {
+  transform: rotate(90deg);
+}
+
+/* Inner content of the panel */
+.panel__content {
+  padding: 14px;
+}
+
+/* Optional: button style consistency for the new header button */
+.controls .ghost {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.controls .ghost:hover {
+  background: #1f2937;
+}
+
+/* Ensure space above the very first panel matches spacing between panels */
+#app > .panel:first-child {
+  margin-top: 16px; /* same as margin-bottom */
 }

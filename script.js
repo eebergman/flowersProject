@@ -83,6 +83,35 @@ function __applyToggleVisual(toggleEl, labelEl, colorName, isTrue) {
   }
 }
 
+function installSidebarToggleButton() {
+  const controls = document.querySelector(".controls");
+  if (!controls) return;
+
+  // Create button once
+  let button = document.getElementById("btnToggleSidebar");
+  if (!button) {
+    button = document.createElement("button");
+    button.id = "btnToggleSidebar";
+    button.type = "button";
+    button.className = "ghost";
+    controls.prepend(button); // put it first in the toolbar
+  }
+
+  const sidebarElement = document.getElementById("sidebar");
+  const KEY = "sidebarCollapsed";
+
+  // initial state from storage
+  const collapsed = localStorage.getItem(KEY) === "1";
+  if (collapsed) sidebarElement.classList.add("collapsed");
+  button.textContent = collapsed ? "Show Sidebar" : "Hide Sidebar";
+
+  button.addEventListener("click", () => {
+    const nowCollapsed = sidebarElement.classList.toggle("collapsed");
+    button.textContent = nowCollapsed ? "Show Sidebar" : "Hide Sidebar";
+    localStorage.setItem(KEY, nowCollapsed ? "1" : "0");
+  });
+}
+
 // --- MAIN: render color toggles for one species, in fixed order -------------
 /**
  * Renders the color toggles grid for a species.
@@ -128,7 +157,7 @@ function renderColorToggles(species, parentEl, onDirty) {
   parentEl.appendChild(grid);
 }
 
-// Collect the JSON buttons
+// JSON buttons stuff
 function initControls() {
   const fileInputElement = document.getElementById("fileInput");
   const pasteButton = document.getElementById("btnPaste");
@@ -200,8 +229,10 @@ function initControls() {
 // Run after DOM is loaded
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initControls);
+  installSidebarToggleButton();
 } else {
   initControls();
+  installSidebarToggleButton();
 }
 
 function loadJSON(json, name) {
@@ -222,54 +253,73 @@ function render() {
     const btn = document.createElement("button");
     btn.textContent = `${sp.name || "Species[" + i + "]"}`;
     btn.addEventListener("click", () => {
-      document
-        .getElementById("species-" + i)
-        .scrollIntoView({ behavior: "smooth" });
+      const target = document.getElementById("species-" + i);
+      if (target && target.tagName.toLowerCase() === "details") {
+        target.open = true; // ensure expanded
+      }
+      target?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
     sidebar.appendChild(btn);
 
-    // Panel
-    const panel = document.createElement("section");
-    panel.className = "panel";
-    panel.id = "species-" + i;
-    panel.innerHTML = `<h2>${sp.name || "Species[" + i + "]"}</h2>`;
+    // Species Panel
+    // Collapsible panel
+    const details = document.createElement("details");
+    details.className = "panel species";
+    details.id = "species-" + i;
+    details.open = true; // start expanded; set to false if you prefer collapsed by default
+
+    // Summary header
+    const summary = document.createElement("summary");
+    summary.textContent = sp.name || "Species[" + i + "]";
+    details.appendChild(summary);
+
+    // Content wrapper
+    const content = document.createElement("div");
+    content.className = "panel__content";
+    details.appendChild(content);
 
     // Colors (fixed order, true-only colorization)
     const colorsMount = document.createElement("div");
-    panel.appendChild(colorsMount);
+    content.appendChild(colorsMount);
     renderColorToggles(sp, colorsMount, () => {
-      // optional: mark dirty / update status if needed
+      // mark dirty if needed
     });
 
     // Transferable colors numbers
     if (sp.transferable_colors) {
-      const det = document.createElement("details");
-      det.className = "transfer";
-      det.innerHTML = "<summary>Transferable colors</summary>";
+      const transferDetails = document.createElement("details");
+      transferDetails.className = "transfer";
+      transferDetails.innerHTML = "<summary>Transferable colors</summary>";
+
       const nums = document.createElement("div");
       nums.className = "nums";
-      Object.entries(sp.transferable_colors).forEach(([k, v]) => {
+
+      Object.entries(sp.transferable_colors).forEach(([key, value]) => {
         const row = document.createElement("div");
         row.className = "numrow";
+
         const label = document.createElement("label");
-        label.textContent = k
+        label.textContent = key
           .split("_")
           .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
           .join(" ");
+
         const input = document.createElement("input");
         input.type = "number";
-        input.value = v;
+        input.value = value;
         input.min = 0;
         input.addEventListener("change", () => {
-          sp.transferable_colors[k] = parseInt(input.value) || 0;
+          sp.transferable_colors[key] = parseInt(input.value, 10) || 0;
         });
+
         row.append(label, input);
         nums.appendChild(row);
       });
-      det.appendChild(nums);
-      panel.appendChild(det);
+
+      transferDetails.appendChild(nums);
+      content.appendChild(transferDetails);
     }
 
-    app.appendChild(panel);
+    app.appendChild(details);
   });
 }
