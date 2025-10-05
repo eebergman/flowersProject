@@ -71,8 +71,8 @@ const __toggleColorStyles = {
 };
 
 // --- Utility to style a single toggle box based on its value ----------------
-function __applyToggleVisual(toggleEl, labelEl, colorName, isTrue) {
-  if (isTrue && __toggleColorStyles[colorName]) {
+function __applyToggleVisual(toggleEl, labelEl, colorName, hasThisFlower) {
+  if (hasThisFlower && __toggleColorStyles[colorName]) {
     const s = __toggleColorStyles[colorName];
     toggleEl.style.backgroundColor = s.bg;
     toggleEl.style.borderColor = "rgba(0,0,0,0)";
