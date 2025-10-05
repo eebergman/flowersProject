@@ -97,7 +97,7 @@ function installSidebarToggleButton() {
     button = document.createElement("button");
     button.id = "btnToggleSidebar";
     button.type = "button";
-    button.className = "ghost";
+    button.className = "sidebar-btn";
     controls.prepend(button); // put it first in the toolbar
   }
 

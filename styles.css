@@ -34,7 +34,7 @@ header {
 
 .sidebar {
   width: 8em;
-  background: #111827;
+  background: #112427;
   border-right: 1px solid var(--border);
   overflow-y: auto;
   padding: 10px;
@@ -226,16 +226,16 @@ details.panel[open] > summary::after {
 }
 
 /* Optional: button style consistency for the new header button */
-.controls .ghost {
-  background: none;
+.controls .sidebar-btn {
+  background: #3d506d;
   border: 1px solid var(--border);
   color: var(--text);
   border-radius: 8px;
   padding: 6px 10px;
   cursor: pointer;
 }
-.controls .ghost:hover {
-  background: #1f2937;
+.controls .sidebar-btn:hover {
+  background: #5e789c;
 }
 
 /* Ensure space above the very first panel matches spacing between panels */
