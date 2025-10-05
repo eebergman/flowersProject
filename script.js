@@ -327,3 +327,28 @@ function render() {
     app.appendChild(details);
   });
 }
+
+async function bootstrapFromSameOrigin() {
+  try {
+    if (window.__flowersLoaded) return;
+
+    const res = await fetch("./flowers.json", { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const json = await res.json();
+
+    if (typeof loadJSON === "function") {
+      loadJSON(json, "flowers.json");
+      window.__flowersLoaded = true;
+      console.log("Loaded default flowers.json from same origin.");
+    } else {
+      console.warn(
+        "loadJSON(json, label) was not found. Stashing data at window.__flowersPending."
+      );
+      window.__flowersPending = json;
+    }
+  } catch (e) {
+    console.warn("Could not load ./flowers.json:", e);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", bootstrapFromSameOrigin);
