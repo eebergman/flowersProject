@@ -8,7 +8,8 @@
         "Swamp",
         "Gemstone",
         "Greenhouse",
-        "Cloud"
+        "Cloud",
+        "Wheatflower"
       ],
       "source": "Meadow",
       "transferable_colors": {
@@ -60,7 +61,8 @@
         "Swamp",
         "Gemstone",
         "Greenhouse",
-        "Cloud"
+        "Cloud",
+        "Wheatflower"
       ],
       "source": "Meadow",
       "transferable_colors": {
@@ -112,7 +114,8 @@
         "Swamp",
         "Gemstone",
         "Greenhouse",
-        "Cloud"
+        "Cloud",
+        "Wheatflower"
       ],
       "source": "Meadow",
       "transferable_colors": {
@@ -164,7 +167,8 @@
         "Swamp",
         "Gemstone",
         "Greenhouse",
-        "Cloud"
+        "Cloud",
+        "Wheatflower"
       ],
       "source": "Meadow",
       "transferable_colors": {
@@ -210,7 +214,14 @@
     },
     {
       "name": "Hibiscus",
-      "allowed_biomes": ["Meadow", "Resort", "Swamp", "Volcano", "Greenhouse"],
+      "allowed_biomes": [
+        "Meadow",
+        "Resort",
+        "Swamp",
+        "Volcano",
+        "Greenhouse",
+        "Wheatflower"
+      ],
       "source": "Resort",
       "transferable_colors": {
         "black_patterned": 0,
@@ -255,7 +266,14 @@
     },
     {
       "name": "Ghostgleam",
-      "allowed_biomes": ["Swamp", "Gemstone", "Reef", "Greenhouse", "Cloud"],
+      "allowed_biomes": [
+        "Swamp",
+        "Gemstone",
+        "Reef",
+        "Greenhouse",
+        "Cloud",
+        "Wheatflower"
+      ],
       "source": "Swamp",
       "transferable_colors": {
         "black_patterned": 0,
@@ -300,7 +318,13 @@
     },
     {
       "name": "Thistle",
-      "allowed_biomes": ["Swamp", "Gemstone", "Volcano", "Greenhouse"],
+      "allowed_biomes": [
+        "Swamp",
+        "Gemstone",
+        "Volcano",
+        "Greenhouse",
+        "Wheatflower"
+      ],
       "source": "Gemstone",
       "transferable_colors": {
         "black_patterned": 0,
@@ -345,7 +369,7 @@
     },
     {
       "name": "Heavy Nettle",
-      "allowed_biomes": ["Gemstone", "Volcano", "Greenhouse"],
+      "allowed_biomes": ["Gemstone", "Volcano", "Greenhouse", "Wheatflower"],
       "source": "Volcano",
       "transferable_colors": {
         "black_patterned": 0,
@@ -390,7 +414,7 @@
     },
     {
       "name": "Anemone",
-      "allowed_biomes": ["Reef", "Greenhouse", "Cloud"],
+      "allowed_biomes": ["Reef", "Greenhouse", "Cloud", "Wheatflower"],
       "source": "Reef",
       "transferable_colors": {
         "black_patterned": 0,
@@ -435,7 +459,7 @@
     },
     {
       "name": "Dreampuff",
-      "allowed_biomes": ["Cloud"],
+      "allowed_biomes": ["Greenhouse", "Cloud", "Wheatflower"],
       "source": "Cloud",
       "transferable_colors": {
         "black_patterned": 0,
@@ -569,6 +593,96 @@
       }
     },
     {
+      "name": "Bubbaluna",
+      "allowed_biomes": ["Moon"],
+      "source": "Caves",
+      "transferable_colors": {
+        "black_patterned": 0,
+        "blue_patterned": 0,
+        "hot_pink_patterned": 0,
+        "red_patterned": 0,
+        "sky_patterned": 0,
+        "white_patterned": 0,
+        "yellow_patterned": 0
+      },
+      "colors": {
+        "Black": false,
+        "Blue": false,
+        "Blush": false,
+        "Cloud": false,
+        "Cool Pink": false,
+        "Coral": false,
+        "Cream": false,
+        "Gray": false,
+        "Green": false,
+        "Hot Pink": false,
+        "Ice": false,
+        "Indigo": false,
+        "Lilac": false,
+        "Lime": false,
+        "Magenta": false,
+        "Mint": false,
+        "Orange": false,
+        "Peach": false,
+        "Periwinkle": false,
+        "Pink": false,
+        "Pistachio": false,
+        "Red": false,
+        "Seafoam": false,
+        "Sky": false,
+        "Teal": false,
+        "Violet": false,
+        "Warm Pink": false,
+        "White": false,
+        "Yellow": false
+      }
+    },
+    {
+      "name": "Wheatflower",
+      "allowed_biomes": ["Greenhouse", "Wheatflower"],
+      "source": "Caves",
+      "transferable_colors": {
+        "black_patterned": 0,
+        "blue_patterned": 0,
+        "hot_pink_patterned": 0,
+        "red_patterned": 0,
+        "sky_patterned": 0,
+        "white_patterned": 0,
+        "yellow_patterned": 0
+      },
+      "colors": {
+        "Black": false,
+        "Blue": false,
+        "Blush": false,
+        "Cloud": false,
+        "Cool Pink": false,
+        "Coral": false,
+        "Cream": false,
+        "Gray": false,
+        "Green": false,
+        "Hot Pink": false,
+        "Ice": false,
+        "Indigo": false,
+        "Lilac": false,
+        "Lime": false,
+        "Magenta": false,
+        "Mint": false,
+        "Orange": false,
+        "Peach": false,
+        "Periwinkle": false,
+        "Pink": false,
+        "Pistachio": false,
+        "Red": false,
+        "Seafoam": false,
+        "Sky": false,
+        "Teal": false,
+        "Violet": false,
+        "Warm Pink": false,
+        "White": false,
+        "Yellow": false
+      }
+    },
+    {
       "name": "Crystalia",
       "allowed_biomes": ["Caves"],
       "source": "Caves",
@@ -620,7 +734,8 @@
         "Resort",
         "Gemstone",
         "Volcano",
-        "Greenhouse"
+        "Greenhouse",
+        "Wheatflower"
       ],
       "source": "Colorblaze",
       "transferable_colors": {
@@ -677,7 +792,8 @@
         "Cloud",
         "Peak",
         "Caldera",
-        "Caves"
+        "Caves",
+        "Moon"
       ],
       "source": "Meh",
       "transferable_colors": {
@@ -723,7 +839,14 @@
     },
     {
       "name": "Pinwheel",
-      "allowed_biomes": ["Meadow", "Resort", "Gemstone", "Greenhouse", "Cloud"],
+      "allowed_biomes": [
+        "Meadow",
+        "Resort",
+        "Gemstone",
+        "Greenhouse",
+        "Cloud",
+        "Wheatflower"
+      ],
       "source": "Paper_Parade",
       "transferable_colors": {
         "black_patterned": 0,
@@ -768,7 +891,14 @@
     },
     {
       "name": "Petunia",
-      "allowed_biomes": ["Meadow", "Resort", "Swamp", "Gemstone", "Greenhouse"],
+      "allowed_biomes": [
+        "Meadow",
+        "Resort",
+        "Swamp",
+        "Gemstone",
+        "Greenhouse",
+        "Wheatflower"
+      ],
       "source": "Jamboree",
       "transferable_colors": {
         "black_patterned": 0,
@@ -821,7 +951,8 @@
         "Cloud",
         "Peak",
         "Caldera",
-        "Caves"
+        "Caves",
+        "Wheatflower"
       ],
       "source": "Interlude_of_Dreams",
       "transferable_colors": {
@@ -867,7 +998,13 @@
     },
     {
       "name": "Poinsettia",
-      "allowed_biomes": ["Meadow", "Resort", "Swamp", "Greenhouse"],
+      "allowed_biomes": [
+        "Meadow",
+        "Resort",
+        "Swamp",
+        "Greenhouse",
+        "Wheatflower"
+      ],
       "source": "Give_and_Gather",
       "transferable_colors": {
         "black_patterned": 0,
@@ -920,7 +1057,9 @@
         "Cloud",
         "Peak",
         "Caldera",
-        "Caves"
+        "Caves",
+        "Wheatflower",
+        "Moon"
       ],
       "source": "Lighttime",
       "transferable_colors": {
@@ -966,7 +1105,7 @@
     },
     {
       "name": "Rose",
-      "allowed_biomes": ["Meadow", "Resort", "Greenhouse"],
+      "allowed_biomes": ["Meadow", "Resort", "Greenhouse", "Wheatflower"],
       "source": "Hugs_and_Hearts",
       "transferable_colors": {
         "black_patterned": 0,
@@ -1018,7 +1157,8 @@
         "Volcano",
         "Greenhouse",
         "Cloud",
-        "Caves"
+        "Caves",
+        "Moon"
       ],
       "source": "Happy_Haven_Days",
       "transferable_colors": {
