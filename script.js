@@ -1,10 +1,33 @@
-const $ = (s) => document.querySelector(s);
-const app = $("#app");
-const sidebar = $("#sidebar");
-let data = null,
-  originalData = null;
+// Hey I use AI to help me write code because I currently have a debilitating pain disorder that makes typing almost impossible.
+// I still want to code though. So I use AI as an accessibility aid to help me reduce the pain caused by my chronic costochondritis.
 
-// --- Fixed color display order (always used for rendering) ------------------
+const appEl = document.getElementById("app");
+const sidebarEl = document.getElementById("sidebar");
+const fileInputEl = document.getElementById("fileInput");
+const btnDownload = document.getElementById("btnDownload");
+const btnCopy = document.getElementById("btnCopy");
+const btnReset = document.getElementById("btnReset");
+const statusEl = document.getElementById("status");
+const controlsRow = document.querySelector("header .controls");
+
+// Sidebar hide button
+const sidebarBtn = document.createElement("button");
+sidebarBtn.className = "sidebar-btn";
+sidebarBtn.id = "btnToggleSidebar";
+sidebarBtn.type = "button";
+sidebarBtn.textContent = "Hide Sidebar";
+controlsRow.prepend(sidebarBtn);
+
+// Everything State
+const STORAGE_KEY = "flowersData";
+let data = null;
+let originalData = null;
+let lastSavedJSON = localStorage.getItem(STORAGE_KEY) ?? "";
+let saveTimer = null;
+// Everything State
+
+const speciesNodeCache = new Map(); // name -> { details, summaryTextSpan }
+
 const __colorDisplayOrder = [
   "Black",
   "Blue",
@@ -36,9 +59,7 @@ const __colorDisplayOrder = [
   "White",
   "Yellow",
 ];
-
-// --- Per-color styles for TRUE boxes only -----------------------------------
-const __toggleColorStyles = {
+const toggleColorStyles = {
   Black: { bg: "#000000", text: "#ffffff" },
   Blue: { bg: "#3279f7", text: "#ffffff" },
   Blush: { bg: "#f48f99", text: "#000000" },
@@ -70,285 +91,463 @@ const __toggleColorStyles = {
   Yellow: { bg: "#e8dc47", text: "#000000" },
 };
 
-// --- Utility to style a single toggle box based on its value ----------------
-function __applyToggleVisual(toggleEl, labelEl, colorName, hasThisFlower) {
-  if (hasThisFlower && __toggleColorStyles[colorName]) {
-    const s = __toggleColorStyles[colorName];
-    toggleEl.style.backgroundColor = s.bg;
-    toggleEl.style.borderColor = "rgba(0,0,0,0)";
-    if (labelEl) labelEl.style.color = s.text;
-    else toggleEl.style.color = s.text;
+function applyToggleStyle(wrapEl, textEl, colorName, isOn) {
+  const style = toggleColorStyles[colorName];
+  if (!style) {
+    wrapEl.style.background = isOn ? "#0c1626" : "";
+    wrapEl.style.borderColor = "var(--border)";
+    textEl.style.color = "var(--text)";
+    return;
+  }
+  if (isOn) {
+    wrapEl.style.background = style.bg;
+    wrapEl.style.borderColor = style.bg;
+    textEl.style.color = style.text;
   } else {
-    // Dark theme defaults for FALSE
-    toggleEl.style.backgroundColor = "#0c1626";
-    toggleEl.style.borderColor = "var(--border)";
-    if (labelEl) labelEl.style.color = "";
-    else toggleEl.style.color = "";
+    wrapEl.style.background = "#0c1626";
+    wrapEl.style.borderColor = "var(--border)";
+    textEl.style.color = "var(--text)";
   }
 }
 
-function installSidebarToggleButton() {
-  const controls = document.querySelector(".controls");
-  if (!controls) return;
-
-  // Create button once
-  let button = document.getElementById("btnToggleSidebar");
-  if (!button) {
-    button = document.createElement("button");
-    button.id = "btnToggleSidebar";
-    button.type = "button";
-    button.className = "sidebar-btn";
-    controls.prepend(button); // put it first in the toolbar
+// initialize the app starting with localStorage
+(async function init() {
+  setStatus("Initializing…");
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      data = JSON.parse(saved);
+      originalData = structuredClone(data);
+      setStatus("Loaded from localStorage");
+      hydrateApp();
+      return;
+    } catch (err) {
+      console.error("localStorage parse error, falling back to JSON file", err);
+    }
   }
+  // Fallback to new flowers.json
+  try {
+    const res = await fetch("flowers.json");
+    if (!res.ok) throw new Error(res.status + " " + res.statusText);
+    data = await res.json();
+    originalData = structuredClone(data);
+    setStatus("Loaded default flowers.json");
+    hydrateApp();
+  } catch (err) {
+    console.error("Failed to load flowers.json", err);
+    setStatus("Error loading JSON");
+  }
+})();
 
-  const sidebarElement = document.getElementById("sidebar");
-  const KEY = "sidebarCollapsed";
+// Make it save
+function saveToLocalBatched() {
+  if (saveTimer) return;
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    try {
+      const next = JSON.stringify(data);
+      if (next !== lastSavedJSON) {
+        localStorage.setItem(STORAGE_KEY, next);
+        lastSavedJSON = next;
+        setStatus("Saved");
+      }
+    } catch (err) {
+      console.error("Failed to save to localStorage", err);
+      setStatus("Save error");
+    }
+  }, 250);
+}
 
-  // initial state from storage
-  const collapsed = localStorage.getItem(KEY) === "1";
-  if (collapsed) sidebarElement.classList.add("collapsed");
-  button.textContent = collapsed ? "Show Sidebar" : "Hide Sidebar";
+// Little Ones
+function hydrateApp() {
+  buildSidebar();
+  renderAllOnce();
+  wireGlobalHandlers();
+}
 
-  button.addEventListener("click", () => {
-    const nowCollapsed = sidebarElement.classList.toggle("collapsed");
-    button.textContent = nowCollapsed ? "Show Sidebar" : "Hide Sidebar";
-    localStorage.setItem(KEY, nowCollapsed ? "1" : "0");
+function setStatus(msg) {
+  if (!statusEl) return;
+  statusEl.textContent = msg;
+}
+
+// The Sidebar
+function buildSidebar() {
+  if (!sidebarEl) return;
+  sidebarEl.innerHTML = "";
+
+  const littleLine = document.createElement("hr");
+  const h2 = document.createElement("h2");
+  h2.textContent = "Species";
+  sidebarEl.appendChild(h2);
+  sidebarEl.appendChild(littleLine);
+
+  const list = document.createElement("div");
+  for (const s of data.species) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = s.name;
+    btn.addEventListener("click", () => {
+      const node = speciesNodeCache.get(s.name)?.details;
+      if (node) {
+        node.scrollIntoView({ behavior: "smooth", block: "start" });
+        node.open = true;
+      }
+    });
+    list.appendChild(btn);
+  }
+  sidebarEl.appendChild(list);
+}
+
+// Sidebar collapse
+sidebarBtn.addEventListener("click", () => {
+  sidebarEl.classList.toggle("collapsed");
+  sidebarBtn.textContent = sidebarEl.classList.contains("collapsed")
+    ? "Show Sidebar"
+    : "Hide Sidebar";
+});
+
+// Big Render
+function renderAllOnce() {
+  speciesNodeCache.clear();
+  const frag = document.createDocumentFragment();
+  for (const s of data.species) {
+    frag.appendChild(renderSpeciesPanelStub(s));
+  }
+  appEl.textContent = "";
+  appEl.appendChild(frag);
+}
+
+function renderSpeciesPanelStub(species) {
+  const details = document.createElement("details");
+  details.className = "panel";
+  details.id = `species-${cssSafe(species.name)}`;
+
+  // summary header
+  const summary = document.createElement("summary");
+  const summaryDiv = document.createElement("div");
+  summaryDiv.classList.add("summary-header");
+
+  const title = document.createElement("span");
+  title.style.fontWeight = "700";
+  title.textContent = species.name;
+
+  const meta = document.createElement("span");
+  meta.className = "muted";
+  meta.style.opacity = "0.85";
+  meta.style.fontSize = "12px";
+  meta.innerHTML = buildSpeciesMetaText(species);
+
+  summaryDiv.appendChild(title);
+  summaryDiv.appendChild(meta);
+
+  const right = document.createElement("div");
+  right.style.marginLeft = "auto";
+  right.style.fontSize = "12px";
+  right.style.opacity = "0.9";
+
+  const countsSpan = document.createElement("span");
+  countsSpan.textContent = countsLabel(species);
+  right.appendChild(countsSpan);
+
+  summary.appendChild(summaryDiv);
+  summary.appendChild(right);
+
+  details.appendChild(summary);
+
+  const content = document.createElement("div");
+  content.className = "panel__content";
+  details.appendChild(content);
+
+  // Lazy hydrate on first open
+  let hydrated = false;
+  details.addEventListener(
+    "toggle",
+    () => {
+      if (details.open && !hydrated) {
+        hydrated = true;
+        content.appendChild(buildSpeciesContent(species));
+      }
+    },
+    { passive: true }
+  );
+
+  // cache nodes for quick updates
+  speciesNodeCache.set(species.name, {
+    details,
+    summaryTextSpan: countsSpan,
+    metaSpan: meta,
   });
+
+  return details;
 }
 
-// --- MAIN: render color toggles for one species, in fixed order -------------
-/**
- * Renders the color toggles grid for a species.
- * - species: the species object (with .colors map)
- * - parentEl: container to append into
- * - onDirty: optional callback called after a value changes
- */
-function renderColorToggles(species, parentEl, onDirty) {
-  const grid = document.createElement("div");
-  grid.className = "toggles";
+function buildSpeciesMetaText(species) {
+  const src = species.source ? `<b>Source:</b> <i>${species.source}</i>` : "";
+  const biomes = Array.isArray(species.allowed_biomes)
+    ? `<b>Biomes</b>: <i>${species.allowed_biomes.join(", ")}</i>`
+    : "";
+  return [src, biomes].filter(Boolean).join(" \u2022 ");
+}
 
-  __colorDisplayOrder.forEach((colorName) => {
-    if (!(colorName in species.colors)) return; // skip if species doesn't use this color
+function countsLabel(species) {
+  const onCount = Object.values(species.colors || {}).filter(Boolean).length;
+  const txSum = Object.values(species.transferable_colors || {}).reduce(
+    (a, b) => a + Number(b || 0),
+    0
+  );
+  return `${onCount} colors collected \u2022 ${txSum} transfers`;
+}
 
-    const value = !!species.colors[colorName];
+function applyToggleStyle(wrapEl, textEl, colorName, isOn) {
+  const style = toggleColorStyles[colorName];
+  if (!style) {
+    // fallback
+    wrapEl.style.background = isOn ? "#0c1626" : "";
+    textEl.style.color = "";
+    return;
+  }
+  if (isOn) {
+    wrapEl.style.background = style.bg;
+    wrapEl.style.borderColor = style.bg; // subtle accent
+    textEl.style.color = style.text;
+  } else {
+    wrapEl.style.background = "#0c1626";
+    wrapEl.style.borderColor = "var(--border)";
+    textEl.style.color = "var(--text)";
+  }
+}
 
-    const row = document.createElement("div");
-    row.className = "toggle";
+function buildSpeciesContent(species) {
+  const frag = document.createDocumentFragment();
+
+  // Colors (toggles)
+  const colorsPanel = document.createElement("div");
+  const colorsHeader = document.createElement("div");
+  colorsHeader.textContent = "Colors";
+  colorsHeader.style.fontWeight = "700";
+  colorsHeader.style.marginBottom = "8px";
+  colorsPanel.appendChild(colorsHeader);
+
+  const togglesGrid = document.createElement("div");
+  togglesGrid.className = "toggles";
+
+  // Use data.valid_colors ordering when available
+  const order =
+    Array.isArray(data.valid_colors) && data.valid_colors.length
+      ? data.valid_colors
+      : Object.keys(species.colors || {}).sort();
+
+  for (const colorName of order) {
+    if (!(colorName in (species.colors || {}))) continue;
+
+    const wrap = document.createElement("label");
+    wrap.className = "toggle";
 
     const input = document.createElement("input");
     input.type = "checkbox";
-    input.checked = value;
-    input.setAttribute("aria-label", colorName);
+    input.checked = !!species.colors[colorName];
+    input.dataset.species = species.name;
+    input.dataset.color = colorName;
 
-    const label = document.createElement("label");
-    label.textContent = colorName;
-
-    // Initial visual state
-    __applyToggleVisual(row, label, colorName, input.checked);
-
-    // Change handler: update data, restyle, notify
-    input.addEventListener("change", () => {
-      species.colors[colorName] = input.checked;
-      __applyToggleVisual(row, label, colorName, input.checked);
-      if (typeof onDirty === "function") onDirty();
-    });
-
-    row.appendChild(input);
-    row.appendChild(label);
-    grid.appendChild(row);
-  });
-
-  parentEl.appendChild(grid);
-}
-
-// JSON buttons stuff
-function initControls() {
-  const fileInputElement = document.getElementById("fileInput");
-  const pasteButton = document.getElementById("btnPaste");
-  const downloadButton = document.getElementById("btnDownload");
-  const copyButton = document.getElementById("btnCopy");
-  const resetButton = document.getElementById("btnReset");
-
-  if (fileInputElement) {
-    fileInputElement.addEventListener("change", async (event) => {
-      const selectedFile = event.target.files[0];
-      if (!selectedFile) return;
-
-      try {
-        const fileText = await selectedFile.text();
-        const parsedJson = JSON.parse(fileText);
-        loadJSON(parsedJson, selectedFile.name);
-      } catch (error) {
-        alert("Invalid JSON: " + error.message);
-      }
-    });
-  }
-
-  if (pasteButton) {
-    pasteButton.addEventListener("click", () => {
-      const pastedText = prompt("Paste JSON");
-      if (!pastedText) return;
-
-      try {
-        const parsedJson = JSON.parse(pastedText);
-        loadJSON(parsedJson, "pasted.json");
-      } catch {
-        alert("Invalid JSON");
-      }
-    });
-  }
-
-  if (downloadButton) {
-    downloadButton.addEventListener("click", () => {
-      if (!data) return;
-
-      const blob = new Blob([JSON.stringify(data, null, 2)], {
-        type: "application/json",
-      });
-      const anchorElement = document.createElement("a");
-      anchorElement.href = URL.createObjectURL(blob);
-      anchorElement.download = "flowers.json";
-      anchorElement.click();
-
-      setTimeout(() => URL.revokeObjectURL(anchorElement.href), 1200);
-    });
-  }
-
-  if (copyButton) {
-    copyButton.addEventListener("click", () => {
-      if (!data) return;
-      navigator.clipboard.writeText(JSON.stringify(data, null, 2));
-    });
-  }
-
-  if (resetButton) {
-    resetButton.addEventListener("click", () => {
-      if (!originalData) return;
-      data = structuredClone(originalData);
-      render();
-    });
-  }
-}
-
-// Run after DOM is loaded
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initControls);
-  installSidebarToggleButton();
-} else {
-  initControls();
-  installSidebarToggleButton();
-}
-
-function loadJSON(json, name) {
-  originalData = structuredClone(json);
-  data = structuredClone(json);
-  $("#status").textContent = "Loaded: " + name;
-  render();
-}
-
-// ------------------------------- RENDER -------------------------------------
-function render() {
-  app.innerHTML = "";
-  sidebar.innerHTML = "<h2>Species</h2>";
-  if (!data || !Array.isArray(data.species)) return;
-
-  data.species.forEach((sp, i) => {
-    // Sidebar link
-    const btn = document.createElement("button");
-    btn.textContent = `${sp.name || "Species[" + i + "]"}`;
-    btn.addEventListener("click", () => {
-      const target = document.getElementById("species-" + i);
-      if (target && target.tagName.toLowerCase() === "details") {
-        target.open = true; // ensure expanded
-      }
-      target?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-    sidebar.appendChild(btn);
-
-    // Species Panel
-    // Collapsible panel
-    const details = document.createElement("details");
-    details.className = "panel species";
-    details.id = "species-" + i;
-    details.open = true; // start expanded; set to false if you prefer collapsed by default
-
-    // Summary header
-    const summary = document.createElement("summary");
-    summary.textContent = sp.name || "Species[" + i + "]";
-    details.appendChild(summary);
-
-    // Content wrapper
-    const content = document.createElement("div");
-    content.className = "panel__content";
-    details.appendChild(content);
-
-    // Colors (fixed order, true-only colorization)
-    const colorsMount = document.createElement("div");
-    content.appendChild(colorsMount);
-    renderColorToggles(sp, colorsMount, () => {
-      // mark dirty if needed
-    });
-
-    // Transferable colors numbers
-    if (sp.transferable_colors) {
-      const transferDetails = document.createElement("details");
-      transferDetails.className = "transfer";
-      transferDetails.innerHTML = "<summary>Transferable colors</summary>";
-
-      const nums = document.createElement("div");
-      nums.className = "nums";
-
-      Object.entries(sp.transferable_colors).forEach(([key, value]) => {
-        const row = document.createElement("div");
-        row.className = "numrow";
-
-        const label = document.createElement("label");
-        label.textContent = key
-          .split("_")
-          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(" ");
-
-        const input = document.createElement("input");
-        input.type = "number";
-        input.value = value;
-        input.min = 0;
-        input.addEventListener("change", () => {
-          sp.transferable_colors[key] = parseInt(input.value, 10) || 0;
-        });
-
-        row.append(label, input);
-        nums.appendChild(row);
-      });
-
-      transferDetails.appendChild(nums);
-      content.appendChild(transferDetails);
+    const text = document.createElement("span");
+    const emph = ["White", "Red", "Yellow", "Sky", "Blue", "Hot Pink"];
+    if (emph.includes(colorName)) {
+      text.style.fontWeight = "700";
+      text.style.textDecoration = "underline";
     }
+    text.textContent = colorName;
 
-    app.appendChild(details);
+    // Paint based on JSON state
+    applyToggleStyle(wrap, text, colorName, input.checked);
+
+    wrap.appendChild(input);
+    wrap.appendChild(text);
+    togglesGrid.appendChild(wrap);
+  }
+
+  colorsPanel.appendChild(togglesGrid);
+  frag.appendChild(colorsPanel);
+
+  // Transferable colors (numbers)
+  const tx = species.transferable_colors || {};
+  if (Object.keys(tx).length) {
+    const detailsTx = document.createElement("details");
+    detailsTx.className = "transfer";
+    const sum = document.createElement("summary");
+    sum.textContent = "Patterned color transfer settings";
+    detailsTx.appendChild(sum);
+
+    const nums = document.createElement("div");
+    nums.className = "nums";
+    for (const key of Object.keys(tx)) {
+      const row = document.createElement("div");
+      row.className = "numrow";
+
+      const label = document.createElement("label");
+      label.textContent = labelizeTxKey(key);
+
+      const input = document.createElement("input");
+      input.type = "number";
+      input.inputMode = "numeric";
+      input.min = "0";
+      input.step = "1";
+      input.value = String(tx[key] ?? 0);
+      input.dataset.species = species.name;
+      input.dataset.txkey = key;
+
+      row.appendChild(label);
+      row.appendChild(input);
+      nums.appendChild(row);
+    }
+    detailsTx.appendChild(nums);
+    frag.appendChild(detailsTx);
+  }
+
+  return frag;
+}
+
+function labelizeTxKey(k) {
+  // e.g., "red_patterned" -> "Red (patterned)"
+  if (!k) return "";
+  const [base, rest] = String(k).split("_");
+  const cap = base.charAt(0).toUpperCase() + base.slice(1);
+  return rest ? `${cap} (${rest.replace(/_/g, " ")})` : cap;
+}
+
+function cssSafe(str) {
+  return String(str)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-");
+}
+
+// ====== Global input handling (delegated) ======
+appEl.addEventListener("change", (e) => {
+  const t = e.target;
+
+  // Checkbox toggles for colors
+  if (t.matches('input[type="checkbox"][data-color][data-species]')) {
+    const speciesName = t.dataset.species;
+    const color = t.dataset.color;
+    const s = data.species.find((x) => x.name === speciesName);
+    if (s && s.colors && color in s.colors) {
+      s.colors[color] = !!t.checked;
+      saveToLocalBatched();
+      scheduleSummaryUpdate(speciesName);
+
+      const wrap = t.closest("label.toggle");
+      const textEl = wrap?.querySelector("span");
+      if (wrap && textEl) applyToggleStyle(wrap, textEl, color, t.checked);
+    }
+    return;
+  }
+
+  // Number inputs for transferable colors
+  if (t.matches('input[type="number"][data-txkey][data-species]')) {
+    const speciesName = t.dataset.species;
+    const key = t.dataset.txkey;
+    const s = data.species.find((x) => x.name === speciesName);
+    if (s && s.transferable_colors && key in s.transferable_colors) {
+      const num = Number(t.value);
+      s.transferable_colors[key] =
+        Number.isFinite(num) && num >= 0 ? Math.floor(num) : 0;
+      saveToLocalBatched();
+      scheduleSummaryUpdate(speciesName);
+    }
+    return;
+  }
+});
+
+// Minimal UI refresh (summary counts only)
+let uiRefreshQueued = false;
+const pendingSummaryUpdates = new Set();
+
+function scheduleSummaryUpdate(speciesName) {
+  pendingSummaryUpdates.add(speciesName);
+  if (uiRefreshQueued) return;
+  uiRefreshQueued = true;
+  requestAnimationFrame(() => {
+    uiRefreshQueued = false;
+    for (const name of pendingSummaryUpdates) {
+      const s = data.species.find((x) => x.name === name);
+      const nodes = speciesNodeCache.get(name);
+      if (s && nodes?.summaryTextSpan) {
+        nodes.summaryTextSpan.textContent = countsLabel(s);
+      }
+    }
+    pendingSummaryUpdates.clear();
   });
 }
 
-async function bootstrapFromSameOrigin() {
+// ====== Buttons & File I/O ======
+// File input (JSON)
+fileInputEl.addEventListener("change", async () => {
+  const file = fileInputEl.files && fileInputEl.files[0];
+  if (!file) return;
   try {
-    if (window.__flowersLoaded) return;
-
-    const res = await fetch("./flowers.json", { cache: "no-store" });
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    const json = await res.json();
-
-    if (typeof loadJSON === "function") {
-      loadJSON(json, "flowers.json");
-      window.__flowersLoaded = true;
-      console.log("Loaded default flowers.json from same origin.");
-    } else {
-      console.warn(
-        "loadJSON(json, label) was not found. Stashing data at window.__flowersPending."
-      );
-      window.__flowersPending = json;
-    }
-  } catch (e) {
-    console.warn("Could not load ./flowers.json:", e);
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    if (!isFlowersShape(parsed)) throw new Error("Invalid JSON schema");
+    data = parsed;
+    originalData = structuredClone(parsed);
+    hardRerender();
+    lastSavedJSON = "";
+    saveToLocalBatched(); // persist newly loaded file
+    setStatus(`Loaded: ${file.name}`);
+  } catch (err) {
+    console.error("File load error", err);
+    setStatus("Invalid JSON file");
+  } finally {
+    fileInputEl.value = "";
   }
+});
+
+// Download current JSON
+btnDownload.addEventListener("click", () => {
+  try {
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "flowers.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setStatus("Downloaded");
+  } catch (err) {
+    console.error("Download error", err);
+    setStatus("Download error");
+  }
+});
+
+// Copy to clipboard
+btnCopy.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+    setStatus("Copied to clipboard");
+  } catch (err) {
+    console.error("Clipboard error", err);
+    setStatus("Copy error");
+  }
+});
+
+// Revert to last loaded dataset
+btnReset.addEventListener("click", () => {
+  if (!originalData) return;
+  data = structuredClone(originalData);
+  hardRerender();
+  lastSavedJSON = "";
+  saveToLocalBatched();
+  setStatus("Reverted to last loaded");
+});
+
+// Full rerender for major loads/resets only
+function hardRerender() {
+  buildSidebar();
+  renderAllOnce();
 }
 
-document.addEventListener("DOMContentLoaded", bootstrapFromSameOrigin);
+// ====== Schema Guard (very light) ======
+function isFlowersShape(obj) {
+  return obj && typeof obj === "object" && Array.isArray(obj.species);
+}

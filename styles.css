@@ -187,23 +187,22 @@ details.transfer > summary {
 
 /* Collapsible species panels (use <details class="panel">) */
 details.panel {
-  /* reuses your .panel look */
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 0; /* summary gets its own padding */
-  margin-bottom: 16px;
+  padding: 0;
+  margin-bottom: 1em;
 }
 
 /* Summary header row for each species */
 details.panel > summary {
-  list-style: none; /* hide default marker */
+  list-style: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   cursor: pointer;
-  padding: 14px; /* match old .panel padding */
+  padding: 14px;
   font-weight: 600;
   user-select: none;
   border-bottom: 1px solid var(--border);
@@ -230,7 +229,7 @@ details.panel[open] > summary::after {
   background: #3d506d;
   border: 1px solid var(--border);
   color: var(--text);
-  border-radius: 8px;
+  border-radius: 0.5em;
   padding: 6px 10px;
   cursor: pointer;
 }
@@ -240,5 +239,11 @@ details.panel[open] > summary::after {
 
 /* Ensure space above the very first panel matches spacing between panels */
 #app > .panel:first-child {
-  margin-top: 16px; /* same as margin-bottom */
+  margin-top: 1em;
+}
+
+.summary-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
 }
